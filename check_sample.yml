@@ -1,0 +1,36 @@
+settings:
+    graphite_server: http://localhost
+    graphite_port: 2003
+    pool_size: 50
+    # if you dont want to send to graphite.
+    dry_run: True
+    log_level: INFO
+
+urls:
+    google:
+        url: http://www.google.com/
+        # dont follow redirects
+        allow_redirects: False
+        # check if status code is 301 or 302
+        status_code: [301, 302]
+
+    org.python:
+        url: http://www.python.org/
+
+        # this will check this text exists in html source
+        text: Python is a programming language that lets you work quickly
+
+        # some html checks
+        html:
+            # this will check if title element == Welcome to Python.org
+            - title: Welcome to Python.org
+            # or write a reqular expression, surround your reg. exp. with ~/ /
+            - title: ~/.*Python.*/
+            # we pass selector directly to (beatifulsoup.select)[http://www.crummy.com/software/BeautifulSoup/bs4/doc/#css-selectors]
+            # so you can write this - check if element exists
+            #
+            # <h1 class="site-headline">
+            #        <a href="/"><img class="python-logo" src="/static/img/python-logo.png" alt="python&trade;"></a>
+            # </h1>
+            #
+            - h1.site-headline > a > img.python-logo: ~//

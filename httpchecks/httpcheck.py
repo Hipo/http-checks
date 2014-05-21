@@ -16,14 +16,14 @@ import sys
 
 log = logging.getLogger(__name__)
 
-def send_metric_to_carbon(metric_name, value, carbon_server, carbon_port, ts=None, dry_run=False):
+def send_metric_to_carbon(metric_name, value, graphite_host, graphite_port, ts=None, dry_run=False):
     if not ts:
         ts = int(time.time())
     message = '%s %s %d\n' % (metric_name, value, int(ts))
     log.info("sending to graphite %s", message)
-    if not dry_run:
+    if not dry_run and graphite_host and graphite_port:
         sock = socket.socket()
-        sock.connect((carbon_server, carbon_port))
+        sock.connect((graphite_host, graphite_port))
         sock.sendall(message)
         sock.close()
 
@@ -156,7 +156,11 @@ def main():
     logging.basicConfig(level=config['settings'].get('log_level', 'DEBUG').upper())
 
     graphite_host = config['settings'].get('graphite_host')
-    graphite_port = int(config['settings'].get('graphite_port'))
+    try:
+        graphite_port = int(config['settings'].get('graphite_port'))
+    except:
+        graphite_port = None
+
     rs = []
     for k, urlconf in config['urls'].iteritems():
         r = AsyncRequest(
@@ -191,15 +195,17 @@ def main():
         for check in checks:
             if not check(req):
                 failed = True
-                log.debug('[%s] failed check - %s', req.url, check)
+                log.critical('[%s] FAILED check - %s', req.url, check)
                 break
 
         if not failed:
             elapsed = req.response.elapsed.total_seconds()
         else:
             exit_code = 2
-        send_metric_to_carbon('http_check.%s' % req.name, elapsed,
-                              carbon_server=graphite_host, carbon_port=graphite_port,
+        send_metric_to_carbon('http_check.%s' % req.name,
+                              elapsed,
+                              graphite_host=graphite_host,
+                              graphite_port=graphite_port,
                               dry_run=config['settings'].get('dry_run', False))
 
     sys.exit(exit_code)

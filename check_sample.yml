@@ -1,8 +1,9 @@
 settings:
-    graphite_server: http://localhost
-    graphite_port: 2003
+   graphite_host: localhost
+   graphite_port: 2003
     pool_size: 50
-    # if you dont want to send to graphite.
+    # if you dont want to send to graphite. Useful for deploy scripts etc.
+    # you can set dry_run false or just leave graphite_host or graphite_port blank
     dry_run: True
     log_level: INFO
 

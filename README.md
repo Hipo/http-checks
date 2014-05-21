@@ -1,6 +1,8 @@
 http-checks
 -------------------
-http-checks is a simple url checker, that sends results to graphite.
+http-checks is a simple url checker, that sends results to graphite - or just print to stdout.
+
+It uses gevent, although our main aim is not on performance, it can check a couple of hundred urls in few seconds.
 
 Installation
 -------------------
@@ -63,7 +65,6 @@ http-checks -c config.yml
 then you can check if some urls fails with (graphite-alerts)[https://github.com/ybrs/graphite-alerts]
 
 If any of the tests fails, we exit with status code 2, so you can add this to your deploy scripts, alerting systems etc easily.
-
 
 
 

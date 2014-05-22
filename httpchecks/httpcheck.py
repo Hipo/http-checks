@@ -16,16 +16,15 @@ import sys
 
 log = logging.getLogger(__name__)
 
-def send_metric_to_carbon(metric_name, value, graphite_host, graphite_port, ts=None, dry_run=False):
+def send_metric_to_carbon(metric_name, value, graphite_host, graphite_port, ts=None):
     if not ts:
         ts = int(time.time())
     message = '%s %s %d\n' % (metric_name, value, int(ts))
     log.info("sending to graphite %s", message)
-    if not dry_run and graphite_host and graphite_port:
-        sock = socket.socket()
-        sock.connect((graphite_host, graphite_port))
-        sock.sendall(message)
-        sock.close()
+    sock = socket.socket()
+    sock.connect((graphite_host, graphite_port))
+    sock.sendall(message)
+    sock.close()
 
 # Monkey-patch.
 gmonkey.patch_all(thread=False, select=False)
@@ -203,11 +202,15 @@ def main():
             elapsed = req.response.elapsed.total_seconds()
         else:
             exit_code = 2
-        send_metric_to_carbon('http_check.%s' % req.name,
+
+        if not config['settings'].get('dry_run', False) \
+            and graphite_host and graphite_port:
+            send_metric_to_carbon('http_check.%s' % req.name,
                               elapsed,
                               graphite_host=graphite_host,
-                              graphite_port=graphite_port,
-                              dry_run=config['settings'].get('dry_run', False))
+                              graphite_port=graphite_port)
+        else:
+            log.info("[%s] completed in %s", req.name, elapsed)
 
     sys.exit(exit_code)
 

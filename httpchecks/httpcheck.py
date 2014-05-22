@@ -80,6 +80,7 @@ class AsyncRequest(object):
         except Exception as e:
             self.response = None
             self.error = e
+            log.exception("[%s] gave exception" % self.url)
             return
         return self.response
 

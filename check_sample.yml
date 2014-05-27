@@ -15,6 +15,17 @@ urls:
         # check if status code is 301 or 302
         status_code: [301, 302]
 
+    someapp:
+        url: http://localhost:8888/
+        # dont follow redirects
+        allow_redirects: False
+        # check if status code is 301 or 302
+        status_code: [301, 302]
+        # you can send headers as you like mostly useful for checking servers
+        # internally
+        header:
+            Host: python.org
+
     org.python:
         url: http://www.python.org/
 

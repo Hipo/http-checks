@@ -167,7 +167,8 @@ def main():
                 method=urlconf.get('method', 'GET'),
                 timeout=urlconf.get('timeout', 5.0),
                 url=urlconf['url'],
-                allow_redirects=urlconf.get('allow_redirects', True)
+                allow_redirects=urlconf.get('allow_redirects', True),
+                headers=urlconf.get('headers', None)
             )
         r.name = k
         r.waiting_status_code = urlconf.get('status_code', None)

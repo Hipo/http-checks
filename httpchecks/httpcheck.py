@@ -65,6 +65,15 @@ class AsyncRequest(object):
         self.waiting_status_code = None
         self.check_text = self.check_html = None
 
+    def set_next_checks(self, checks):
+        self.next_urls = checks
+
+    def get_next_check(self):
+        try:
+            return self.next_urls.pop(0)
+        except:
+            return None
+
     def send(self, **kwargs):
         """
         Prepares request based on parameter passed to constructor and optional ``kwargs```.
@@ -85,15 +94,36 @@ class AsyncRequest(object):
             return
         return self.response
 
+    def __repr__(self):
+        return "<AsyncRequest %s>" % self.url
 
-def send(r, pool=None, stream=False):
+def finished(x):
+    print "completed...."
+
+def send(r, pool=None, stream=False, callback=None):
     """Sends the request object using the specified pool. If a pool isn't
     specified this method blocks. Pools are useful because you can specify size
     and can hence limit concurrency."""
     if pool != None:
         return pool.spawn(r.send, stream=stream)
 
-    return gevent.spawn(r.send, stream=stream)
+    def mycb(*args, **kwargs):
+        next_req = args[0].request.get_next_check()
+
+        if next_req:
+            print "next url", next_req.url
+            send(next_req, callback=mycb)
+        else:
+            ready.set()
+
+            finished("foo")
+
+    print ">>>>", r
+    p = gevent.spawn(r.send, stream=stream)
+    p.request = r
+    p.link(mycb)
+
+
 
 def map(requests, stream=False, size=None):
     """Concurrently converts a list of Requests to Responses.
@@ -147,6 +177,7 @@ def check_status_code(req):
     return req.response.status_code in req.waiting_status_code
 
 def check_response(req):
+    log.debug("[%s] response %s ", req.url, req.response.content)
     return req.response
 
 
@@ -161,9 +192,40 @@ def notify_by_slack(url, channel, username, description, icon_emoji):
     ))
 
 
+def get_request(k, urlconf, callback=None):
+    r = AsyncRequest(
+            method = urlconf.get('method', 'GET'),
+            timeout = urlconf.get('timeout', 5.0),
+            url = urlconf['url'],
+            allow_redirects = urlconf.get('allow_redirects', True),
+            headers = urlconf.get('headers', None),
+            data = urlconf.get('data', None),
+            callback = callback
+        )
+    r.name = k
+    r.waiting_status_code = urlconf.get('status_code', None)
+    if not r.waiting_status_code:
+        r.waiting_status_code = [200]
+
+    r.check_text = urlconf.get('text', None)
+    r.check_html = urlconf.get('html', None)
+    return r
+
+checks = [
+    check_response,
+    check_status_code,
+    check_text,
+    check_html
+]
+
+
+ready = gevent.event.Event()
+ready.clear()
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', '-c', help='config file', dest='config_file', default='check.yml')
+    parser.add_argument('--config', '-c', help='config file',
+                        dest='config_file', default='check.yml')
     args = parser.parse_args()
     config = yaml.load(open(args.config_file))
 
@@ -176,36 +238,38 @@ def main():
         graphite_port = None
 
     rs = []
+    sync_map = []
+
+    def cb(*args, **kwargs):
+        print "instance", args[0].__class__
+        print args, kwargs
+
     for k, urlconf in config['urls'].iteritems():
-        r = AsyncRequest(
-                method=urlconf.get('method', 'GET'),
-                timeout=urlconf.get('timeout', 5.0),
-                url=urlconf['url'],
-                allow_redirects=urlconf.get('allow_redirects', True),
-                headers=urlconf.get('headers', None)
-            )
-        r.name = k
-        r.waiting_status_code = urlconf.get('status_code', None)
-        if not r.waiting_status_code:
-            r.waiting_status_code = [200]
+        # different sessions can run in parallel
+        if isinstance(urlconf, list):
+            for c in urlconf:
+                # but individual urls in session must run in sync.
+                print ">>> adding >>>", c
+                r = get_request(k, c)
+                sync_map.append(r)
+                r.next_urls = sync_map
 
-        r.check_text = urlconf.get('text', None)
-        r.check_html = urlconf.get('html', None)
-        rs.append(r)
+        else:
+            # these can run in parallel, because they dont need to have a defined flow
+            r = get_request(k, urlconf)
+            rs.append(r)
 
-    checks = [
-        check_response,
-        check_status_code,
-        check_text,
-        check_html
-    ]
+
+    send(sync_map[0].get_next_check())
+
+    ready.wait()
 
     reqs = map(rs, size=config.get('pool_size', 10))
     exit_code = 0
 
+
     for req in reqs:
         elapsed = -1
-
         failed = False
         for check in checks:
             if not check(req):
@@ -217,7 +281,7 @@ def main():
                         url = slack_config['url'],
                         channel  = slack_config['channel'],
                         username  = slack_config['username'],
-                        description  = '[%s] FAILED check - %s' % (req.name, check.__name__),
+                        description  = '[%s] FAILED check - %s - %s' % (req.name, req.url, check.__name__),
                         icon_emoji = slack_config['icon_emoji']
                     )
                 break

@@ -13,6 +13,8 @@ import argparse
 from bs4 import BeautifulSoup
 import re
 import sys
+import json
+import requests
 
 log = logging.getLogger(__name__)
 
@@ -147,6 +149,18 @@ def check_status_code(req):
 def check_response(req):
     return req.response
 
+
+def notify_by_slack(url, channel, username, description, icon_emoji):
+    payload = {"channel": channel,
+               "username": username,
+               "text": str(description),
+               "icon_emoji": icon_emoji}
+
+    requests.post(url, dict(
+        payload=json.dumps(payload)
+    ))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', help='config file', dest='config_file', default='check.yml')
@@ -196,7 +210,16 @@ def main():
         for check in checks:
             if not check(req):
                 failed = True
-                log.critical('[%s] FAILED check - %s', req.url, check)
+                log.critical('[%s] FAILED check - %s', req.name, check.__name__)
+                slack_config = config['settings'].get('slack', None)
+                if slack_config:
+                    notify_by_slack(
+                        url = slack_config['url'],
+                        channel  = slack_config['channel'],
+                        username  = slack_config['username'],
+                        description  = '[%s] FAILED check - %s' % (req.name, check.__name__),
+                        icon_emoji = slack_config['icon_emoji']
+                    )
                 break
 
         if not failed:

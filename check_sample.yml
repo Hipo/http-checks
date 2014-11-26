@@ -1,11 +1,18 @@
 settings:
-   graphite_host: localhost
-   graphite_port: 2003
+    graphite_host: localhost
+    graphite_port: 2003
     pool_size: 50
     # if you dont want to send to graphite. Useful for deploy scripts etc.
     # you can set dry_run false or just leave graphite_host or graphite_port blank
     dry_run: True
     log_level: INFO
+
+    # alert to slack if you want to
+    slack:
+        channel: '#alerts'
+        username: 'alertus'
+        icon_emoji: ':warning:'
+        url: 'https://XXX.slack.com/services/hooks/incoming-webhook?token=12233443'
 
 urls:
     google:

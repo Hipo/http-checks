@@ -65,15 +65,6 @@ class AsyncRequest(object):
         self.waiting_status_code = None
         self.check_text = self.check_html = None
 
-    def set_next_checks(self, checks):
-        self.next_urls = checks
-
-    def get_next_check(self):
-        try:
-            return self.next_urls.pop(0)
-        except:
-            return None
-
     def send(self, **kwargs):
         """
         Prepares request based on parameter passed to constructor and optional ``kwargs```.
@@ -107,21 +98,7 @@ def send(r, pool=None, stream=False, callback=None):
     if pool != None:
         return pool.spawn(r.send, stream=stream)
 
-    def mycb(*args, **kwargs):
-        next_req = args[0].request.get_next_check()
-
-        if next_req:
-            print "next url", next_req.url
-            for check in checks:
-                assert check(args[0].request)
-            send(next_req, callback=mycb)
-        else:
-            ready.set()
-            finished("foo")
-
-    p = gevent.spawn(r.send, stream=stream)
-    p.request = r
-    p.link(mycb)
+    return gevent.spawn(r.send, stream=stream)
 
 
 
@@ -226,6 +203,52 @@ checks = [
 ready = gevent.event.Event()
 ready.clear()
 
+
+class SessionedChecks(object):
+    """
+    this is just a container for tests with sessions
+    """
+    def __init__(self, name):
+        self.name = name
+        self.session = Session()
+        self.steps = []
+
+    def add(self, rs):
+        self.steps.append(rs)
+
+    def next(self):
+        print "getting next", self.steps
+        try:
+            return self.steps.pop(0)
+        except:
+            return None
+
+    def run_cb(self, *args, **kwargs):
+        print "[", self.steps
+        next_req = self.next()
+
+        if next_req:
+            print "next url", next_req.url
+            for check in checks:
+                assert check(args[0].request)
+            self.run(next_req)
+        else:
+            ready.set()
+            finished("foo")
+
+    def run(self, rs=None):
+
+        if not rs:
+            rs = self.next()
+
+        p = gevent.spawn(rs.send, stream=None)
+        p.request = rs
+        p.link(self.run_cb)
+
+    def send(self):
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', help='config file',
@@ -251,21 +274,20 @@ def main():
     for k, urlconf in config['urls'].iteritems():
         # different sessions can run in parallel
         if isinstance(urlconf, list):
-            session = Session()
+            sc = SessionedChecks(name=k)
             for c in urlconf:
                 # but individual urls in session must run in sync.
-                print ">>> adding >>>", c
-                r = get_request(k, c, session=session)
-                sync_map.append(r)
-                r.next_urls = sync_map
+                r = get_request(k, c, session=sc.session)
+                sc.add(r)
+            sync_map.append(sc)
 
         else:
             # these can run in parallel, because they dont need to have a defined flow
             r = get_request(k, urlconf)
             rs.append(r)
 
-
-    send(sync_map[0].get_next_check())
+    for sm in sync_map:
+        sm.run()
 
     ready.wait()
 

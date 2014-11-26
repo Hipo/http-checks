@@ -112,13 +112,13 @@ def send(r, pool=None, stream=False, callback=None):
 
         if next_req:
             print "next url", next_req.url
+            for check in checks:
+                assert check(args[0].request)
             send(next_req, callback=mycb)
         else:
             ready.set()
-
             finished("foo")
 
-    print ">>>>", r
     p = gevent.spawn(r.send, stream=stream)
     p.request = r
     p.link(mycb)
@@ -170,6 +170,9 @@ def check_html(req):
 def check_text(req):
     if not req.check_text:
         return True
+
+    log.debug("[%s] response %s ", req.url, req.response.content)
+
     return req.check_text in req.response.content
 
 def check_status_code(req):
@@ -192,7 +195,7 @@ def notify_by_slack(url, channel, username, description, icon_emoji):
     ))
 
 
-def get_request(k, urlconf, callback=None):
+def get_request(k, urlconf, callback=None, session=None):
     r = AsyncRequest(
             method = urlconf.get('method', 'GET'),
             timeout = urlconf.get('timeout', 5.0),
@@ -200,6 +203,7 @@ def get_request(k, urlconf, callback=None):
             allow_redirects = urlconf.get('allow_redirects', True),
             headers = urlconf.get('headers', None),
             data = urlconf.get('data', None),
+            session = session,
             callback = callback
         )
     r.name = k
@@ -247,10 +251,11 @@ def main():
     for k, urlconf in config['urls'].iteritems():
         # different sessions can run in parallel
         if isinstance(urlconf, list):
+            session = Session()
             for c in urlconf:
                 # but individual urls in session must run in sync.
                 print ">>> adding >>>", c
-                r = get_request(k, c)
+                r = get_request(k, c, session=session)
                 sync_map.append(r)
                 r.next_urls = sync_map
 

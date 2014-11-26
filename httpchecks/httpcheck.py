@@ -217,20 +217,20 @@ class SessionedChecks(object):
         self.steps.append(rs)
 
     def next(self):
-        print "getting next", self.steps
         try:
             return self.steps.pop(0)
         except:
             return None
 
     def run_cb(self, *args, **kwargs):
-        print "[", self.steps
         next_req = self.next()
 
         if next_req:
             print "next url", next_req.url
             for check in checks:
-                assert check(args[0].request)
+                self.result = check(args[0].request)
+                if not self.result:
+                    return
             self.run(next_req)
         else:
             ready.set()

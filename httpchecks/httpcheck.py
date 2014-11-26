@@ -88,9 +88,6 @@ class AsyncRequest(object):
     def __repr__(self):
         return "<AsyncRequest %s>" % self.url
 
-def finished(x):
-    print "completed...."
-
 def send(r, pool=None, stream=False, callback=None):
     """Sends the request object using the specified pool. If a pool isn't
     specified this method blocks. Pools are useful because you can specify size
@@ -203,6 +200,15 @@ checks = [
 ready = gevent.event.Event()
 ready.clear()
 
+finished_jobs = 0
+sync_map = []
+
+def finished(x):
+    global finished_jobs
+    finished_jobs += 1
+    print "completed...."
+    if finished_jobs == len(sync_map):
+        ready.set()
 
 class SessionedChecks(object):
     """
@@ -236,7 +242,6 @@ class SessionedChecks(object):
                     return
             self.run(next_req)
         else:
-            ready.set()
             finished("foo")
 
     def run(self, rs=None):
@@ -268,7 +273,6 @@ def main():
         graphite_port = None
 
     rs = []
-    sync_map = []
 
     def cb(*args, **kwargs):
         print "instance", args[0].__class__

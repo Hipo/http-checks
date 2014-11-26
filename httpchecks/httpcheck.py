@@ -212,14 +212,17 @@ class SessionedChecks(object):
         self.name = name
         self.session = Session()
         self.steps = []
+        self.step_num = 0
 
     def add(self, rs):
         self.steps.append(rs)
 
     def next(self):
         try:
-            return self.steps.pop(0)
-        except:
+            step = self.steps[self.step_num]
+            self.step_num += 1
+            return step
+        except IndexError:
             return None
 
     def run_cb(self, *args, **kwargs):

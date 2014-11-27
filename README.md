@@ -23,6 +23,14 @@ settings:
     dry_run: True
     log_level: INFO
 
+    # alert to slack if you want to
+    slack:
+        channel: '#alerts'
+        username: 'alertus'
+        icon_emoji: ':warning:'
+        url: 'https://XXX.slack.com/services/hooks/incoming-webhook?token=12233443'
+
+
 urls:
     google:
         url: http://www.google.com/
@@ -52,6 +60,42 @@ urls:
             #
             # you can check if element exists with a css selector and an empty reg. exp.
             - h1.site-headline > a > img.python-logo: ~//
+
+    # you can also use more than one url, for testing scenerios.
+    # these will run synchronously, meaning, it will first request the first
+    # url, then the second, then the third etc.
+    #
+    # scenerio tests runs in parallel, so you can check login
+    # and the create new user scenerios at the same time.
+    #
+    # a scenerio test, uses the same session in individual urls. but doesn't share
+    # the session in other scenerios.
+    test-login:
+        -
+            url: http://localhost:5000/?first=1
+
+        # check home page
+        -
+            url: http://localhost:5000/
+
+        # now get login
+        -
+            url: http://localhost:5000/login
+
+        # post to login
+        -
+            url: http://localhost:5000/login
+            method: POST
+            data:
+                username: xyz
+                password: 123
+        -
+            # now go back to / and see if our username is there
+            url: http://localhost:5000/
+            text: xyz
+        -
+            # now go back to / and see if our username is there
+            url: http://localhost:5000/last
 ```
 
 Running

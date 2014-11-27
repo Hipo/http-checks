@@ -14,6 +14,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'http-checks = httpchecks.httpcheck:main',
+            'http-check-server = httpchecks.httpcheck:server',
         ],
     }
 )

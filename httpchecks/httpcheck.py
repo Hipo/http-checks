@@ -260,6 +260,42 @@ class SessionedChecks(object):
 
 exit_code = 0
 
+
+def run_req(req, config, graphite_host, graphite_port):
+    global exit_code
+    elapsed = -1
+    failed = False
+    for check in checks:
+        if not check(req):
+            failed = True
+            log.critical('[%s] FAILED check - %s', req.name, check.__name__)
+            slack_config = config['settings'].get('slack', None)
+            if slack_config:
+                notify_by_slack(
+                    url = slack_config['url'],
+                    channel  = slack_config['channel'],
+                    username  = slack_config['username'],
+                    description  = '[%s] FAILED check - %s - %s' % (req.name, req.url, check.__name__),
+                    icon_emoji = slack_config['icon_emoji']
+                )
+            break
+
+    if not failed:
+        elapsed = req.response.elapsed.total_seconds()
+    else:
+        exit_code = 2
+
+    if not config['settings'].get('dry_run', False) \
+        and graphite_host and graphite_port:
+        send_metric_to_carbon('http_check.%s' % req.name,
+                          elapsed,
+                          graphite_host=graphite_host,
+                          graphite_port=graphite_port)
+    else:
+        log.info("[%s] completed in %s", req.name, elapsed)
+
+
+
 def main():
     global exit_code
 
@@ -300,36 +336,7 @@ def main():
     reqs = map(rs, size=config.get('pool_size', 10))
 
     for req in reqs:
-        elapsed = -1
-        failed = False
-        for check in checks:
-            if not check(req):
-                failed = True
-                log.critical('[%s] FAILED check - %s', req.name, check.__name__)
-                slack_config = config['settings'].get('slack', None)
-                if slack_config:
-                    notify_by_slack(
-                        url = slack_config['url'],
-                        channel  = slack_config['channel'],
-                        username  = slack_config['username'],
-                        description  = '[%s] FAILED check - %s - %s' % (req.name, req.url, check.__name__),
-                        icon_emoji = slack_config['icon_emoji']
-                    )
-                break
-
-        if not failed:
-            elapsed = req.response.elapsed.total_seconds()
-        else:
-            exit_code = 2
-
-        if not config['settings'].get('dry_run', False) \
-            and graphite_host and graphite_port:
-            send_metric_to_carbon('http_check.%s' % req.name,
-                              elapsed,
-                              graphite_host=graphite_host,
-                              graphite_port=graphite_port)
-        else:
-            log.info("[%s] completed in %s", req.name, elapsed)
+        run_req(req, config, graphite_host, graphite_port)
 
     if sync_map:
         ready.wait()

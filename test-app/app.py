@@ -6,6 +6,13 @@ app = Flask(__name__)
 def last():
     return "last"
 
+@app.route('/sleep/<t>')
+def sleep(t):
+    import time
+    time.sleep(int(t))
+    return "sleeped - %s" % t
+
+
 @app.route('/')
 def index():
     if 'username' in session:

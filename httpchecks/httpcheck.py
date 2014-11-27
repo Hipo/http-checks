@@ -144,9 +144,7 @@ def check_html(req):
 def check_text(req):
     if not req.check_text:
         return True
-
     log.debug("[%s] response %s ", req.url, req.response.content)
-
     return req.check_text in req.response.content
 
 def check_status_code(req):
@@ -157,7 +155,6 @@ def check_response(req):
     log.debug("[%s] response %s ", req.url, req.response.content)
     return req.response
 
-
 def notify_by_slack(url, channel, username, description, icon_emoji):
     payload = {"channel": channel,
                "username": username,
@@ -167,7 +164,6 @@ def notify_by_slack(url, channel, username, description, icon_emoji):
     requests.post(url, dict(
         payload=json.dumps(payload)
     ))
-
 
 def get_request(k, urlconf, callback=None, session=None):
     r = AsyncRequest(
@@ -206,7 +202,7 @@ sync_map = []
 def finished(x):
     global finished_jobs
     finished_jobs += 1
-    print "completed...."
+    log.info('all waiting jobs are completed.')
     if finished_jobs == len(sync_map):
         ready.set()
 
@@ -253,9 +249,6 @@ class SessionedChecks(object):
         p.request = rs
         p.link(self.run_cb)
 
-    def send(self):
-        pass
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -273,10 +266,6 @@ def main():
         graphite_port = None
 
     rs = []
-
-    def cb(*args, **kwargs):
-        print "instance", args[0].__class__
-        print args, kwargs
 
     for k, urlconf in config['urls'].iteritems():
         # different sessions can run in parallel
@@ -296,11 +285,8 @@ def main():
     for sm in sync_map:
         sm.run()
 
-    ready.wait()
-
     reqs = map(rs, size=config.get('pool_size', 10))
     exit_code = 0
-
 
     for req in reqs:
         elapsed = -1
@@ -333,6 +319,9 @@ def main():
                               graphite_port=graphite_port)
         else:
             log.info("[%s] completed in %s", req.name, elapsed)
+
+    if sync_map:
+        ready.wait()
 
     sys.exit(exit_code)
 

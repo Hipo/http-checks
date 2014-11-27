@@ -199,12 +199,18 @@ ready.clear()
 finished_jobs = 0
 sync_map = []
 
-def finished(x):
-    global finished_jobs
+def finished(result):
+    global exit_code, finished_jobs
     finished_jobs += 1
-    log.info('all waiting jobs are completed.')
+
+    if not result:
+        # if any of the tests fail we fail too
+        exit_code = 2
+
     if finished_jobs == len(sync_map):
+        log.info('all waiting jobs are completed.')
         ready.set()
+
 
 class SessionedChecks(object):
     """
@@ -235,10 +241,12 @@ class SessionedChecks(object):
             for check in checks:
                 self.result = check(args[0].request)
                 if not self.result:
+                    log.warn("[%s] test failed - step:%s - %s" % (self.name, self.step_num-2, self.steps[self.step_num-2].url))
+                    finished(False)
                     return
             self.run(next_req)
         else:
-            finished("foo")
+            finished(True)
 
     def run(self, rs=None):
 
@@ -250,7 +258,11 @@ class SessionedChecks(object):
         p.link(self.run_cb)
 
 
+exit_code = 0
+
 def main():
+    global exit_code
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', help='config file',
                         dest='config_file', default='check.yml')
@@ -286,7 +298,6 @@ def main():
         sm.run()
 
     reqs = map(rs, size=config.get('pool_size', 10))
-    exit_code = 0
 
     for req in reqs:
         elapsed = -1

@@ -25,27 +25,8 @@ from .notifiers import notify_by_slack
 gmonkey.patch_all(thread=False, select=False)
 
 from checks import check_html, check_response, check_status_code, check_text
-from async_req import send, map, AsyncRequest, run_req
+from async_req import send, map, AsyncRequest, run_req, get_request
 
-def get_request(k, urlconf, callback=None, session=None):
-    r = AsyncRequest(
-            method = urlconf.get('method', 'GET'),
-            timeout = urlconf.get('timeout', 5.0),
-            url = urlconf['url'],
-            allow_redirects = urlconf.get('allow_redirects', True),
-            headers = urlconf.get('headers', None),
-            data = urlconf.get('data', None),
-            session = session,
-            callback = callback
-        )
-    r.name = k
-    r.waiting_status_code = urlconf.get('status_code', None)
-    if not r.waiting_status_code:
-        r.waiting_status_code = [200]
-
-    r.check_text = urlconf.get('text', None)
-    r.check_html = urlconf.get('html', None)
-    return r
 
 checks = [
     check_response,
@@ -61,6 +42,10 @@ ready.clear()
 finished_jobs = 0
 sync_map = []
 
+
+from sessioned_check import SessionedChecks
+
+
 def finished(result):
     global exit_code, finished_jobs
     finished_jobs += 1
@@ -73,57 +58,8 @@ def finished(result):
         log.info('all waiting jobs are completed.')
         ready.set()
 
-from requests import Session
-
-class SessionedChecks(object):
-    """
-    this is just a container for tests with sessions
-    """
-    def __init__(self, name):
-        self.name = name
-        self.session = Session()
-        self.steps = []
-        self.step_num = 0
-
-    def add(self, rs):
-        self.steps.append(rs)
-
-    def next(self):
-        try:
-            step = self.steps[self.step_num]
-            self.step_num += 1
-            return step
-        except IndexError:
-            return None
-
-    def run_cb(self, *args, **kwargs):
-        next_req = self.next()
-
-        if next_req:
-            print "next url", next_req.url
-            for check in checks:
-                self.result = check(args[0].request)
-                if not self.result:
-                    log.warn("[%s] test failed - step:%s - %s" % (self.name, self.step_num-2, self.steps[self.step_num-2].url))
-                    finished(False)
-                    return
-            self.run(next_req)
-        else:
-            finished(True)
-
-    def run(self, rs=None):
-
-        if not rs:
-            rs = self.next()
-
-        p = gevent.spawn(rs.send, stream=None)
-        p.request = rs
-        p.link(self.run_cb)
-
 
 exit_code = 0
-
-
 
 from gevent.wsgi import WSGIServer
 from .apiserver import app
@@ -155,13 +91,12 @@ def main():
     for k, urlconf in config['urls'].iteritems():
         # different sessions can run in parallel
         if isinstance(urlconf, list):
-            sc = SessionedChecks(name=k)
+            sc = SessionedChecks(name=k, finish_callback=finished)
             for c in urlconf:
                 # but individual urls in session must run in sync.
                 r = get_request(k, c, session=sc.session)
                 sc.add(r)
             sync_map.append(sc)
-
         else:
             # these can run in parallel, because they dont need to have a defined flow
             r = get_request(k, urlconf)

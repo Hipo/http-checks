@@ -139,3 +139,24 @@ def run_req(req, config, graphite_host, graphite_port):
         log.info("[%s] completed in %s", req.name, elapsed)
 
     return success
+
+
+def get_request(k, urlconf, callback=None, session=None):
+    r = AsyncRequest(
+            method = urlconf.get('method', 'GET'),
+            timeout = urlconf.get('timeout', 5.0),
+            url = urlconf['url'],
+            allow_redirects = urlconf.get('allow_redirects', True),
+            headers = urlconf.get('headers', None),
+            data = urlconf.get('data', None),
+            session = session,
+            callback = callback
+        )
+    r.name = k
+    r.waiting_status_code = urlconf.get('status_code', None)
+    if not r.waiting_status_code:
+        r.waiting_status_code = [200]
+
+    r.check_text = urlconf.get('text', None)
+    r.check_html = urlconf.get('html', None)
+    return r

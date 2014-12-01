@@ -33,6 +33,7 @@ def check_html(req):
 def check_text(req):
     if not req.check_text:
         return True
+
     log.debug("[%s] response %s ", req.url, req.response.content)
     return req.check_text in req.response.content
 
@@ -41,5 +42,4 @@ def check_status_code(req):
     return req.response.status_code in req.waiting_status_code
 
 def check_response(req):
-    log.debug("[%s] response %s ", req.url, req.response.content)
     return req.response

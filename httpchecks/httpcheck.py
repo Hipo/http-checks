@@ -18,32 +18,14 @@ import requests
 
 log = logging.getLogger(__name__)
 
-def send_metric_to_carbon(metric_name, value, graphite_host, graphite_port, ts=None):
-    if not ts:
-        ts = int(time.time())
-    message = '%s %s %d\n' % (metric_name, value, int(ts))
-    log.info("sending to graphite %s", message)
-    sock = socket.socket()
-    sock.connect((graphite_host, graphite_port))
-    sock.sendall(message)
-    sock.close()
+from .graphite import send_metric_to_carbon
+from .notifiers import notify_by_slack
 
 # Monkey-patch.
 gmonkey.patch_all(thread=False, select=False)
 
 from checks import check_html, check_response, check_status_code, check_text
 from async_req import send, map, AsyncRequest, run_req
-
-
-def notify_by_slack(url, channel, username, description, icon_emoji):
-    payload = {"channel": channel,
-               "username": username,
-               "text": str(description),
-               "icon_emoji": icon_emoji}
-
-    requests.post(url, dict(
-        payload=json.dumps(payload)
-    ))
 
 def get_request(k, urlconf, callback=None, session=None):
     r = AsyncRequest(

@@ -12,6 +12,10 @@ except ImportError:
 
 from requests import Session
 
+from .graphite import send_metric_to_carbon
+from .notifiers import notify_by_slack
+
+
 from checks import check_html, check_response, check_status_code, check_text
 checks = [
     check_response,

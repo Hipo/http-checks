@@ -1,4 +1,6 @@
 import logging
+import time
+import datetime
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +57,8 @@ class AsyncRequest(object):
         self.name = None
         self.waiting_status_code = None
         self.check_text = self.check_html = None
+        self.started_at = None
+        self.finished_at = None
 
     def send(self, **kwargs):
         """
@@ -69,9 +73,11 @@ class AsyncRequest(object):
         try:
             self.response = self.session.request(self.method,
                                               self.url, **merged_kwargs)
+            self.finished_at = datetime.datetime.utcnow()
         except Exception as e:
             self.response = None
             self.error = e
+            self.finished_at = datetime.datetime.utcnow()
             log.exception("[%s] gave exception" % self.url)
             return
         return self.response
@@ -126,8 +132,10 @@ def run_req(req, config, graphite_host, graphite_port):
 
     if not failed:
         elapsed = req.response.elapsed.total_seconds()
+        req.finished_at = time.time()
     else:
         success = False
+        req.finished_at = time.time()
 
     if not config['settings'].get('dry_run', False) \
         and graphite_host and graphite_port:

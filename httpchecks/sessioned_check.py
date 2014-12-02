@@ -6,6 +6,8 @@ except ImportError:
     raise RuntimeError('Gevent is required.')
 
 import logging
+import time
+import datetime
 
 log = logging.getLogger(__name__)
 
@@ -30,8 +32,14 @@ class SessionedChecks(object):
         self.session = Session()
         self.steps = []
         self.step_num = 0
-        self.finished = finish_callback
+        self._finished = finish_callback
         self.options = options or {}
+        self.started_at = None
+        self.finished_at = None
+
+    def finished(self, *args, **kwargs):
+        self.finished_at = datetime.datetime.utcnow()
+        self._finished(*args, **kwargs)
 
     def add(self, rs):
         self.steps.append(rs)
@@ -60,9 +68,13 @@ class SessionedChecks(object):
             self.finished(True, self)
 
     def run(self, rs=None):
+        if not self.started_at:
+            self.started_at = datetime.datetime.utcnow()
 
         if not rs:
             rs = self.next()
+
+        rs.started_at = datetime.datetime.utcnow()
 
         p = gevent.spawn(rs.send, stream=None)
         p.request = rs

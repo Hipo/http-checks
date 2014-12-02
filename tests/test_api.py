@@ -95,7 +95,7 @@ google:
 
         t1 = time.time()
         while not self.queue.empty():
-            print "waiting for jobs to finish...", (t1 - time.time())
+            print "waiting for jobs to finish...", (time.time(), t1)
             time.sleep(1)
             if (time.time() - t1) > 5:
                 raise Exception('not completed')

@@ -17,20 +17,43 @@ checks = {}
 def hello():
     return json.dumps({'result': True})
 
+
+class DateEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, 'isoformat'):
+            return obj.isoformat()
+        else:
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
+
 def finished(result, req):
     print "finished....", result, req
     if req.options.get('callback_url', None):
         print "sending result to callback url", req.options['callback_url']
         try:
+
+            steps = []
+            for i in req.steps:
+                print "------->>>>>", i, i.url, i.started_at, i.finished_at, i.response.status_code
+                steps.append(dict(
+                    url=i.url,
+                    started_at = i.started_at,
+                    finished_at = i.finished_at,
+                    error = i.error,
+                    status_code = i.response.status_code
+
+                ))
+
             requests.post(
                 req.options['callback_url'],
                 headers={'content-type': 'application/json'},
                 data=json.dumps(dict(
                     id=str(req.options['id']),
                     result=result,
-                    # finished_at=
-                    # started_at=
-                ))
+                    finished_at = req.finished_at,
+                    started_at = req.started_at,
+                    steps = steps
+                ), cls=DateEncoder)
             )
         except:
             log.exception('exception on passing callback url')

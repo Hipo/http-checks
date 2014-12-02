@@ -26,7 +26,10 @@ def finished(result, req):
                 req.options['callback_url'],
                 headers={'content-type': 'application/json'},
                 data=json.dumps(dict(
-                    id=str(req.options['id'])
+                    id=str(req.options['id']),
+                    result=result,
+                    # finished_at=
+                    # started_at=
                 ))
             )
         except:

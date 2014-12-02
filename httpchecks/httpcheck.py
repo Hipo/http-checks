@@ -6,20 +6,12 @@ except ImportError:
     raise RuntimeError('Gevent is required.')
 
 import yaml
-import socket
-import time
 import logging
 import argparse
-from bs4 import BeautifulSoup
-import re
 import sys
-import json
-import requests
 
 log = logging.getLogger(__name__)
 
-from .graphite import send_metric_to_carbon
-from .notifiers import notify_by_slack
 
 # Monkey-patch.
 gmonkey.patch_all(thread=False, select=False)
@@ -46,7 +38,7 @@ sync_map = []
 from sessioned_check import SessionedChecks
 
 
-def finished(result):
+def finished(result, job):
     global exit_code, finished_jobs
     finished_jobs += 1
 

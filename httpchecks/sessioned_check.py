@@ -25,12 +25,13 @@ class SessionedChecks(object):
     """
     this is just a container for tests with sessions
     """
-    def __init__(self, name, finish_callback):
+    def __init__(self, name, finish_callback, options=None):
         self.name = name
         self.session = Session()
         self.steps = []
         self.step_num = 0
         self.finished = finish_callback
+        self.options = options or {}
 
     def add(self, rs):
         self.steps.append(rs)
@@ -52,11 +53,11 @@ class SessionedChecks(object):
                 self.result = check(args[0].request)
                 if not self.result:
                     log.warn("[%s] test failed - step:%s - %s" % (self.name, self.step_num-2, self.steps[self.step_num-2].url))
-                    self.finished(False)
+                    self.finished(False, self)
                     return
             self.run(next_req)
         else:
-            self.finished(True)
+            self.finished(True, self)
 
     def run(self, rs=None):
 

@@ -5,6 +5,8 @@ import requests
 import time
 import json
 import yaml
+from testapp.app import run as app_run
+from testapp.app2 import run as app2_run
 
 base_url = 'http://localhost:8091'
 
@@ -32,6 +34,16 @@ class TestApiFunctions(unittest.TestCase):
         self.server_process.start()
         self.collector_process = Process(target=run_collector, args=(self.queue,))
         self.collector_process.start()
+
+        self.app_processes = [
+            Process(target=app_run),
+            Process(target=app2_run, args=(5001,)),
+            Process(target=app2_run, args=(5002,)),
+        ]
+
+        for p in self.app_processes:
+            p.start()
+
         time.sleep(0.2)
 
     def test_choice(self):
@@ -103,6 +115,8 @@ google:
     def tearDown(self):
         self.server_process.terminate()
         self.collector_process.terminate()
+        for p in self.app_processes:
+            p.terminate()
 
 if __name__ == '__main__':
     unittest.main()

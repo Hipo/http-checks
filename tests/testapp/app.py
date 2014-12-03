@@ -7,9 +7,14 @@ def last():
     return "last"
 
 @app.route('/sleep/<t>')
-def index(t):
+def sleep(t):
     import time
     time.sleep(int(t))
+    return "sleeped - %s" % t
+
+
+@app.route('/')
+def index():
     if 'username' in session:
         return 'Logged in as %s' % escape(session['username'])
     return 'You are not logged in'
@@ -35,8 +40,8 @@ def logout():
 # set the secret key.  keep this really secret:
 app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
 
-
-import os
+def run():
+    app.run()
 
 if __name__ == "__main__":
-    app.run(port=int(os.environ.get('port', 5001)), debug=True)
+    run()

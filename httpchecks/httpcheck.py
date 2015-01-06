@@ -152,7 +152,10 @@ def check_status_code(req):
     return req.response.status_code in req.waiting_status_code
 
 def check_response(req):
-    log.debug("[%s] response %s ", req.url, req.response.content)
+    resp_content = ""
+    if req.response:
+        resp_content = req.response.content
+    log.debug("[%s] response %s ", req.url, resp_content)
     return req.response
 
 def notify_by_slack(url, channel, username, description, icon_emoji):
@@ -237,7 +240,6 @@ class SessionedChecks(object):
         next_req = self.next()
 
         if next_req:
-            print "next url", next_req.url
             for check in checks:
                 self.result = check(args[0].request)
                 if not self.result:

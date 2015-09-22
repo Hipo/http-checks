@@ -1,4 +1,5 @@
 from flask import Flask, session, redirect, url_for, escape, request
+import json
 
 app = Flask(__name__)
 
@@ -18,6 +19,10 @@ def index():
     if 'username' in session:
         return 'Logged in as %s' % escape(session['username'])
     return 'You are not logged in'
+
+@app.route('/test-json')
+def test_json():
+    return json.dumps({'objects':[{'name': 'testfoo'}]})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

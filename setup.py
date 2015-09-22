@@ -9,7 +9,7 @@ setup(
     packages=['httpchecks'],
     include_package_data=True,
     zip_safe=False,
-    install_requires=['pyyaml', 'requests', 'gevent', 'beautifulsoup4'],
+    install_requires=['pyyaml', 'requests', 'gevent', 'beautifulsoup4', 'jsonpath_rw'],
     url='https://github.com/Hipo/http-checks',
     entry_points = {
         'console_scripts': [

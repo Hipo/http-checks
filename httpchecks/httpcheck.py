@@ -15,6 +15,7 @@ import re
 import sys
 import json
 import requests
+import json
 
 log = logging.getLogger(__name__)
 
@@ -158,6 +159,22 @@ def check_response(req):
     log.debug("[%s] response %s ", req.url, resp_content)
     return req.response
 
+def check_json(req):
+    from jsonpath_rw import jsonpath, parse
+
+    if not req.check_json:
+        return True
+
+    j = json.loads(req.response.content)
+    for check in req.check_json:
+        for k, v in check.items():
+            path = parse(k)
+            matches = path.find(j)
+            if not matches:
+                return False
+            return matches[0].value == v
+
+
 def notify_by_slack(url, channel, username, description, icon_emoji):
     payload = {"channel": channel,
                "username": username,
@@ -186,13 +203,15 @@ def get_request(k, urlconf, callback=None, session=None):
 
     r.check_text = urlconf.get('text', None)
     r.check_html = urlconf.get('html', None)
+    r.check_json = urlconf.get('json', None)
     return r
 
 checks = [
     check_response,
     check_status_code,
     check_text,
-    check_html
+    check_html,
+    check_json
 ]
 
 

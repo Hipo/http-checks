@@ -15,7 +15,6 @@ import re
 import sys
 import json
 import requests
-import json
 
 log = logging.getLogger(__name__)
 

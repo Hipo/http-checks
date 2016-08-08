@@ -99,7 +99,7 @@ def send(r, pool=None, stream=False, callback=None):
 
 
 
-def map(requests, stream=False, size=None):
+def map_requests(requests, stream=False, size=None):
     """Concurrently converts a list of Requests to Responses.
 
     :param requests: a collection of Request objects.
@@ -317,7 +317,7 @@ def main():
     for sm in sync_map:
         sm.run()
 
-    reqs = map(rs, size=config.get('pool_size', 10))
+    reqs = map_requests(rs, size=config.get('pool_size', 10))
 
     for req in reqs:
         elapsed = -1

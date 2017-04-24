@@ -299,7 +299,7 @@ def main():
 
     rs = []
 
-    for k, urlconf in config['urls'].iteritems():
+    for k, urlconf in config['urls'].items():
         # different sessions can run in parallel
         if isinstance(urlconf, list):
             sc = SessionedChecks(name=k)

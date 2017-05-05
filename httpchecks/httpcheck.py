@@ -18,6 +18,7 @@ import requests
 
 log = logging.getLogger(__name__)
 
+
 def send_metric_to_carbon(metric_name, value, graphite_host, graphite_port, ts=None):
     if not ts:
         ts = int(time.time())
@@ -32,6 +33,7 @@ def send_metric_to_carbon(metric_name, value, graphite_host, graphite_port, ts=N
 gmonkey.patch_all(thread=False, select=False)
 
 from requests import Session
+
 
 class AsyncRequest(object):
     """ Asynchronous request.
@@ -77,7 +79,7 @@ class AsyncRequest(object):
         merged_kwargs.update(kwargs)
         try:
             self.response = self.session.request(self.method,
-                                              self.url, **merged_kwargs)
+                                                 self.url, **merged_kwargs)
         except Exception as e:
             self.response = None
             self.error = e
@@ -88,6 +90,7 @@ class AsyncRequest(object):
     def __repr__(self):
         return "<AsyncRequest %s>" % self.url
 
+
 def send(r, pool=None, stream=False, callback=None):
     """Sends the request object using the specified pool. If a pool isn't
     specified this method blocks. Pools are useful because you can specify size
@@ -96,7 +99,6 @@ def send(r, pool=None, stream=False, callback=None):
         return pool.spawn(r.send, stream=stream)
 
     return gevent.spawn(r.send, stream=stream)
-
 
 
 def map_requests(requests, stream=False, size=None):
@@ -121,7 +123,7 @@ def check_html(req):
 
     soup = BeautifulSoup(req.response.content)
     for html_check in req.check_html:
-        for selector, v in html_check.iteritems():
+        for selector, v in html_check.items():
             elements = soup.select(selector)
             if not elements:
                 log.debug('[%s] couldn\'t find any elements matching %s', req.url, selector)
@@ -141,25 +143,24 @@ def check_html(req):
                         return False
     return True
 
+
 def check_text(req):
     if not req.check_text:
         return True
-    log.debug("[%s] response %s ", req.url, req.response.content)
     return req.check_text in req.response.content
+
 
 def check_status_code(req):
     log.debug("[%s] checking status code waiting: %s actual: %s", req.url, req.waiting_status_code, req.response.status_code)
     return req.response.status_code in req.waiting_status_code
 
+
 def check_response(req):
-    resp_content = ""
-    if req.response:
-        resp_content = req.response.content
-    log.debug("[%s] response %s ", req.url, resp_content)
     return req.response
 
+
 def check_json(req):
-    from jsonpath_rw import jsonpath, parse
+    from jsonpath_rw import parse
 
     if not req.check_json:
         return True
@@ -183,6 +184,7 @@ def notify_by_slack(url, channel, username, description, icon_emoji):
     requests.post(url, dict(
         payload=json.dumps(payload)
     ))
+
 
 def get_request(k, urlconf, callback=None, session=None):
     r = AsyncRequest(
@@ -219,6 +221,7 @@ ready.clear()
 
 finished_jobs = 0
 sync_map = []
+
 
 def finished(result):
     global exit_code, finished_jobs
@@ -280,6 +283,7 @@ class SessionedChecks(object):
 
 exit_code = 0
 
+
 def main():
     global exit_code
 
@@ -299,7 +303,7 @@ def main():
 
     rs = []
 
-    for k, urlconf in config['urls'].iteritems():
+    for k, urlconf in config['urls'].items():
         # different sessions can run in parallel
         if isinstance(urlconf, list):
             sc = SessionedChecks(name=k)
@@ -343,11 +347,11 @@ def main():
             exit_code = 2
 
         if not config['settings'].get('dry_run', False) \
-            and graphite_host and graphite_port:
+           and graphite_host and graphite_port:
             send_metric_to_carbon('http_check.%s' % req.name,
-                              elapsed,
-                              graphite_host=graphite_host,
-                              graphite_port=graphite_port)
+                                  elapsed,
+                                  graphite_host=graphite_host,
+                                  graphite_port=graphite_port)
         else:
             log.info("[%s] completed in %s", req.name, elapsed)
 

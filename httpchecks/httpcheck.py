@@ -2,6 +2,8 @@ try:
     import gevent
     from gevent import monkey as gmonkey
     from gevent.pool import Pool
+    # Monkey-patch.
+    gmonkey.patch_all(thread=False, select=False)
 except ImportError:
     raise RuntimeError('Gevent is required.')
 
@@ -29,8 +31,6 @@ def send_metric_to_carbon(metric_name, value, graphite_host, graphite_port, ts=N
     sock.sendall(message)
     sock.close()
 
-# Monkey-patch.
-gmonkey.patch_all(thread=False, select=False)
 
 from requests import Session
 

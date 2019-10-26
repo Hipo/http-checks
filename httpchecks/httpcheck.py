@@ -291,7 +291,7 @@ def main():
     parser.add_argument('--config', '-c', help='config file',
                         dest='config_file', default='check.yml')
     args = parser.parse_args()
-    config = yaml.load(open(args.config_file))
+    config = yaml.load(open(args.config_file), Loader=yaml.FullLoader)
 
     logging.basicConfig(level=config['settings'].get('log_level', 'DEBUG').upper())
 

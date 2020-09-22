@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='http-checks',
-    version='0.2.0',
+    version='0.2.1',
     author='ybrs',
     description='http-checks is an application that can test a couple of hundred urls in seconds',
     long_description=__doc__,
